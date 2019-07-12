@@ -46,6 +46,20 @@ type ThrottleLatencyMetric interface {
 	Observe(verb string, u url.URL, latency time.Duration)
 }
 
+type RegisterMetrics struct {
+	RequestLatency         LatencyMetric
+	RequestResult          ResultMetric
+	RequestThrottle        ThrottleMetric
+	RequestThrottleLatency ThrottleLatencyMetric
+}
+
+var RegisteredMetrics = RegisterMetrics{
+	RequestLatency:         noopLatency{},
+	RequestResult:          noopResult{},
+	RequestThrottle:        noopThrottle{},
+	RequestThrottleLatency: noopThrottleLatency{},
+}
+
 var (
 	// RequestLatency is the latency metric that rest clients will update.
 	RequestLatency LatencyMetric = noopLatency{}
@@ -59,12 +73,20 @@ var (
 
 // Register registers metrics for the rest client to use. This can
 // only be called once.
-func Register(lm LatencyMetric, rm ResultMetric, tm ThrottleMetric, tlm ThrottleLatencyMetric) {
+func Register(r RegisterMetrics) {
 	registerMetrics.Do(func() {
-		RequestLatency = lm
-		RequestResult = rm
-		RequestThrottle = tm
-		RequestThrottleLatency = tlm
+		if r.RequestLatency != nil {
+			RequestLatency = r.RequestLatency
+		}
+		if r.RequestResult != nil {
+			RequestResult = r.RequestResult
+		}
+		if r.RequestThrottle != nil {
+			RequestThrottle = r.RequestThrottle
+		}
+		if r.RequestThrottleLatency != nil {
+			RequestThrottleLatency = r.RequestThrottleLatency
+		}
 	})
 }
 
