@@ -36,19 +36,35 @@ type ResultMetric interface {
 	Increment(code string, method string, host string)
 }
 
+// ThrottleMetric counts requests that were throttled.
+type ThrottleMetric interface {
+	Increment(verb string, u url.URL)
+}
+
+// ThrottleLatencyMetric observes client latency introduced by throttling.
+type ThrottleLatencyMetric interface {
+	Observe(verb string, u url.URL, latency time.Duration)
+}
+
 var (
 	// RequestLatency is the latency metric that rest clients will update.
 	RequestLatency LatencyMetric = noopLatency{}
 	// RequestResult is the result metric that rest clients will update.
 	RequestResult ResultMetric = noopResult{}
+	// RequestThrottle is the throttling metric that rest clients will update.
+	RequestThrottle ThrottleMetric = noopThrottle{}
+	// RequestThrottleLatency is the throttling metric metric that rest clients will update.
+	RequestThrottleLatency ThrottleLatencyMetric = noopThrottleLatency{}
 )
 
 // Register registers metrics for the rest client to use. This can
 // only be called once.
-func Register(lm LatencyMetric, rm ResultMetric) {
+func Register(lm LatencyMetric, rm ResultMetric, tm ThrottleMetric, tlm ThrottleLatencyMetric) {
 	registerMetrics.Do(func() {
 		RequestLatency = lm
 		RequestResult = rm
+		RequestThrottle = tm
+		RequestThrottleLatency = tlm
 	})
 }
 
@@ -59,3 +75,11 @@ func (noopLatency) Observe(string, url.URL, time.Duration) {}
 type noopResult struct{}
 
 func (noopResult) Increment(string, string, string) {}
+
+type noopThrottle struct{}
+
+func (noopThrottle) Increment(string, url.URL) {}
+
+type noopThrottleLatency struct{}
+
+func (noopThrottleLatency) Observe(string, url.URL, time.Duration) {}
